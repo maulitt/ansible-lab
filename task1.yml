@@ -1,0 +1,29 @@
+- name: Install and configure nginx
+  hosts: me
+  become: true
+  tasks:
+    - name: Install nginx
+      apt:
+        name: nginx
+        state: latest
+      notify:
+       - start nginx
+
+    - name: Configure nginx
+      template:
+       src: /var/tmp/lab2/nginx.conf.templ
+       dest: /etc/nginx/nginx.conf
+      notify:
+       - restart nginx
+  
+  handlers:
+    - name: start nginx
+      service:
+        name: nginx
+        state: started
+        enabled: true
+
+    - name: restart nginx
+      service:
+        name: nginx
+        state: reloaded
