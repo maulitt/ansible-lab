@@ -1,0 +1,15 @@
+- name: Create cronjob
+  hosts: me
+  become: true
+
+  vars:
+    my_cmd: "date && echo '----------' && cal"
+    
+  tasks:
+    - name: ADding cronjob
+      cron:
+        name: "my_job"
+        minute: "30"
+        hour: "10"
+        job: "{{ my_cmd }}"
+

@@ -1,0 +1,43 @@
+- name: Deploy docker with apache
+  hosts: me
+  become: true
+  tasks:
+  - name: Install docker
+    apt:
+      name: docker.io
+      state: present
+
+  - name: Install python lib
+    # потому что на одном хосте вылезла ошибка с питоном
+    pip:
+      name: docker
+      state: present
+
+  
+  - name: Start docker
+    service:
+      name: docker
+      state: started
+
+  - name: Check if apache_con is running already
+    docker_container_info:
+      name: apache_con
+    register: container_info
+    ignore_errors: true  
+
+
+  - name: Pull image
+    # погуглила и нашла, что можно скачать существующий image с докерхаба
+    docker_image:
+      name: httpd:latest
+      source: pull
+          
+  - name: Run container
+    docker_container:
+      name: apache_con
+      image: httpd:latest
+      ports: 
+        - "8080:80"
+        # пробрасываю 80 порт контейнера на 8080 порт хоста -- 80ый занят нгинксом
+      detach: true
+    

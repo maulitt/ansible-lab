@@ -1,0 +1,61 @@
+- name: Install and configure MySQL
+  hosts: 192.168.62.129
+  become: true
+  vars:
+    db_name: "dbforLab"
+    db_user: "labuser"
+    db_password: "qwerty"
+  
+  tasks:
+    - name: Install MySQL
+      apt:
+        name: mysql-server
+        state: present
+
+    - name: Start service
+      service:
+        name: mysql
+        state: started
+        enabled: true
+
+    - name: Install pip 
+      # потому чтот не всё так просто как кажется
+      apt:
+        name: python3-pip
+        state: present
+
+    - name: Install PyMySQL
+      pip:
+        name: pymysql
+        state: present
+ 
+    
+    - name: Create user in db
+      mysql_user:
+        name: "{{ db_user }}"
+        password: "{{ db_password }}"
+        priv: "*.*:ALL"
+        state: present
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        #login_user: "root
+      tags: mysql
+
+    - name: Create /root/.my.cnf
+      copy:
+        dest: /root/.my.cnf
+        mode: '0600'
+        content: |
+          [client]
+          user="{{ db_user }}"
+          password="{{ db_password }}"
+
+    - name: Create db
+      mysql_db:
+        name: "{{ db_name }}"
+        state: present
+        #login_user: "{{ db_user }}"
+        #login_password: "{{ db_password }}"
+      #become: yes
+      #become_user: "{{ db_user }}"
+      #become_method: sudo
+      tags: mysql
