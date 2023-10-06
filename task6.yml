@@ -1,0 +1,76 @@
+- name: sec check
+  hosts: me
+  become: yes
+  tasks:
+    - name: 1) Check /etc/shadow permissions
+      shell: stat -c %a /etc/shadow
+      register: shadow_permissions
+      ignore_errors: yes
+
+    - name: Save vulnerable hosts to file
+      copy:
+        content: |
+          {% if shadow_permissions.stdout != "640" %}
+          "Unsafe permissions to /etc/shadow"
+          {% endif %}
+        dest: /var/tmp/vulnerable_hosts.txt
+     
+
+
+    - name: 2) Find suid files
+      shell: find / -type f -executable -perm -u=s 2>/dev/null
+      register: suid_files
+      ignore_errors: yes
+
+    - name: Save suid files list to file
+      copy:
+        content: |
+          {% for file in suid_files.stdout_lines %}
+          {{ file }}
+          {% endfor %}
+        dest: /var/tmp/suid_files_{{ inventory_hostname }}.txt
+
+
+    - name: 3.1) Check for PwnKit vulnerability
+      shell: apt-cache policy policykit-1 | grep 18.04.5
+      register: pwnkit_vuln
+      ignore_errors: yes
+
+    - name: 3.2) Check for CVE-2022-0847 vulnerability
+      shell: uname -rs | grep -E '5\.8\.|5\.9|5\.1[1-5]'
+      register: cve_0847
+      ignore_errors: yes
+
+    - name: 3.3) Check for CVE-2016-5195 vulnerability
+      shell: uname -rs | grep -E '2\.6\.3[89]|4\.[0-9]|4\.1[0-4]'
+      register: cve_5195
+      ignore_errors: yes
+
+
+    - name: Save vulnerable hosts to file
+      copy:
+        content: |
+           {% if pwnkit_vuln.stdout != "" %}
+           "This host is vulnerable to PwnKit!"
+           {% endif %}
+           {% if cve_0847.stdout != "" %}
+           "This host is vulnerable to CVE-2022-0847!"
+           {% endif %}
+           {% if cve_5195.stdout != "" %}
+           "This host is vulnerable to CVE-2016-5195!"
+           {% endif %}
+        dest: /var/tmp/vuln_reports.txt
+     
+
+    - name: 4) Check sshd_config for unsafe settings
+      shell: cat /etc/ssh/sshd_config | grep -E 'PermitRootLogin yes|PermitEmptyPasswords yes'
+      register: sshd_config
+      ignore_errors: yes
+
+    - name: Save vulnerable hosts to file
+      copy:
+       content: |
+          {% if sshd_config.stdout != "" %}
+          "This host has unsage sshd options!"
+          {% endif %}
+       dest: /var/tmp/sshconfig_report.txt
